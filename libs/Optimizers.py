@@ -13,28 +13,45 @@ class PSO():
 
 
 class ESMDA():
-	def __init__(self, objective_function, M_prior, y_true, eta=0.001, qsi=0.99, alpha=4):
+	def __init__(self, objective_function, M_prior, y_true, eta=0.001, qsi=0.99, alpha=4, max_ite=100, tol=1e-6, verbose=0):
+		self.obj = objective_function
 		self.M_prior = M_prior
 		self.y_abs = np.abs(y_true)
 		self.eta = eta
 		self.qsi = qsi
-		self.ce_diag = self.eta*self.y_abs
-		self.c_ev = np.sqrt(self.ce_diag.reshape([y_true.shape[0], 1]))
-		self.alphas = [alpha for i in range(alpha)]
-		self.obj = objective_function
-		self.M_post = self.M_prior.copy()
+		self.alpha = alpha
+		self.max_ite = max_ite
+		self.tol = tol
+		self.verbose = verbose
+
+		self.__initialize()
 
 	def run(self):
 		s_diag = np.sqrt(self.ce_diag)
 		s_inv_diag = np.power(s_diag, -1)
 		INd = np.eye(len(self.y_abs))
 
-		for alpha in self.alphas:
-			print(alpha)
-			D = self.__compute_predictions()
-			# print(self.M_post)
-			print(D.std())
-			self.__update_M_post(np.abs(D), alpha)
+		error = 2*self.tol
+		ite = 0
+		while error > self.tol and ite <= self.max_ite:
+			D = self.compute_predictions()
+			self.__update_M_post(np.abs(D), self.alpha)
+			if ite > 0:
+				error = np.abs(D.std() - D_old.std())
+			if self.verbose == 1:
+				print(f"{ite}/{self.max_ite} - {D.std()} - {error}")
+			D_old = D.copy()
+			ite += 1
+
+	# def find_best(self, D):
+
+	def compute_predictions(self):
+		D = np.zeros((len(self.y_abs), self.M_post.shape[1]))
+		for i in range(self.M_post.shape[1]):
+			inputs = self.M_post[:,i]
+			# print(i, inputs)
+			D[:,i] = self.obj(inputs)
+		return D
 
 	def __update_M_post(self, D, alpha):
 		Nd = self.y_abs.shape[0]
@@ -49,72 +66,17 @@ class ESMDA():
 		    Cinv = (np.eye(Nd) - dD@Cinvt@dD.T)/b
 		else:
 		    Cinv = np.linalg.pinv(dD@dD.T + np.eye(Nd)*b)
-		Cinv = Cinv/(self.c_ev@self.c_ev.T)
+		Cinv = Cinv/self.c_ev_2
 		Dobs = self.y_abs.reshape([Nd,1]) + self.c_ev*np.random.randn(Nd,Ne) #Nd x Ne
 		self.M_post += Cmd@Cinv@(Dobs - D) #(Nm x Nd)x(Nd x Nd)x(Nd x Ne) = Nm x Ne
 
-	def __compute_predictions(self):
-		D = np.zeros((len(self.y_abs), self.M_post.shape[1]))
-		for i in range(self.M_post.shape[1]):
-			inputs = self.M_post[:,i]
-			# print(i, inputs)
-			D[:,i] = self.obj(inputs)
-		return D
-
-
-
-if __name__ == '__main__':
-	def generate_M_prior(n_samples):
-		np.random.seed(42)
-		A = np.random.normal(loc=150, scale=50, size=n_samples).reshape((1, n_samples))
-		B = np.random.normal(loc=150, scale=50, size=n_samples).reshape((1, n_samples))
-		C = np.random.normal(loc=150, scale=50, size=n_samples).reshape((1, n_samples))
-		M_prior = np.concatenate((A, B, C), axis=0)
-		return M_prior
-
-	class MyFunction():
-		def __init__(self, t):
-			self.t = t
-
-		def eval(self, inputs):
-			A, B, C = inputs[0], inputs[1], inputs[2]
-			return A + B*self.t + C*np.sin(self.t**2)
-
-	# Create time vector	
-	n_steps = 10
-	final_time = 5
-	time = np.linspace(0, final_time, n_steps)
-
-	# Generate the prior ensemble
-	n_samples = 25
-	M_prior = generate_M_prior(n_samples)
-
-	# Choose true input values
-	A_true = 200.0
-	B_true = 200.0
-	C_true = 150.0
-
-	# Create the observed data
-	my_function = MyFunction(time)
-	y_true = my_function.eval([A_true, B_true, C_true])
-
-	# Apply ES-MDA
-	opt = ESMDA(my_function.eval, M_prior, y_true, eta=0.001, qsi=0.99, alpha=4)
-	opt.run()
-
-
-	print()
-	print("A_true = %.2f"%A_true)
-	print("B_true = %.2f"%B_true)
-	print("C_true = %.2f"%C_true)
-	print()
-
-	A_mean = opt.M_post[0,:].mean()
-	B_mean = opt.M_post[1,:].mean()
-	C_mean = opt.M_post[2,:].mean()
-	print("A = %.2f"%A_mean)
-	print("B = %.2f"%B_mean)
-	print("C = %.2f"%C_mean)
-
+	def __initialize(self):
+		Nd = self.y_abs.shape[0]
+		Ne = self.M_prior.shape[1]
+		self.ce_diag = self.eta*self.y_abs
+		self.c_ev = np.sqrt(self.ce_diag.reshape([self.y_abs.shape[0], 1]))
+		self.c_ev_2 = self.c_ev@self.c_ev.T
+		self.D_obs = self.y_abs.reshape([Nd,1]) + self.c_ev*np.random.randn(Nd,Ne) #Nd x Ne
+		self.M_post = self.M_prior.copy()
 
 
