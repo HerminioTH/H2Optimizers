@@ -43,7 +43,6 @@ class ESMDA():
 		D = np.zeros((len(self.y_abs), self.M_post.shape[1]))
 		for i in range(self.M_post.shape[1]):
 			inputs = self.M_post[:,i]
-			# print(i, inputs)
 			D[:,i] = self.obj(inputs)
 		return D
 
@@ -68,6 +67,7 @@ class ESMDA():
 		Nd = self.y_abs.shape[0]
 		Ne = self.M_prior.shape[1]
 		self.ce_diag = self.eta*self.y_abs
+		# print(self.y_abs.shape)
 		self.c_ev = np.sqrt(self.ce_diag.reshape([self.y_abs.shape[0], 1]))
 		self.c_ev_2 = self.c_ev@self.c_ev.T
 		self.D_obs = self.y_abs.reshape([Nd,1]) + self.c_ev*np.random.randn(Nd,Ne) #Nd x Ne

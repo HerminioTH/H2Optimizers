@@ -105,7 +105,7 @@ def main():
 	time = np.linspace(-final_time, final_time, n_steps)
 
 	# Generate the prior ensemble
-	n_samples = 500
+	n_samples = 200
 	M_prior = generate_M_prior(n_samples)
 
 	# Choose true input values
@@ -117,7 +117,13 @@ def main():
 	my_function = MyFunction(time)
 	y_true = my_function.eval([A_true, B_true, C_true])
 
+	# Compute prior data
+	y_prior = my_function.eval(M_prior)
+	print(y_prior.shape)
+
 	# Apply ES-MDA
+	print(M_prior.shape)
+	print(y_true.shape)
 	optimizer = ESMDA(my_function.eval, M_prior, y_true, eta=0.5, qsi=0.99, alpha=2, verbose=1)
 	optimizer.run()
 
