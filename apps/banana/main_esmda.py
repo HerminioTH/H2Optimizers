@@ -49,8 +49,10 @@ def plot_results(my_function, inputs_true, optimizer):
 	ax_scatter = fig.add_subplot(gs[2:7, 1:9])
 	ax_hist_v = fig.add_subplot(gs[2:7, 9:12])
 
-	x0_min, x0_max = optimizer.M_prior[0,:].min(), optimizer.M_prior[0,:].max()
-	x1_min, x1_max = optimizer.M_prior[1,:].min(), optimizer.M_prior[1,:].max()
+	x0_min = min(optimizer.M_prior[0,:].min(), optimizer.M_post[0,:].min())
+	x0_max = max(optimizer.M_prior[0,:].max(), optimizer.M_post[0,:].max())
+	x1_min = min(optimizer.M_prior[1,:].min(), optimizer.M_post[1,:].min())
+	x1_max = max(optimizer.M_prior[1,:].max(), optimizer.M_post[1,:].max())
 	n_points = 50
 	x0 = np.linspace(x0_min, x0_max, n_points)
 	x1 = np.linspace(x1_min, x1_max, n_points)
@@ -58,18 +60,20 @@ def plot_results(my_function, inputs_true, optimizer):
 	Z = my_function.eval([X0, X1])
 	print(X0.shape)
 	print(Z[0].shape)
-	CS = ax_scatter.contourf(X0, X1, Z[0], 20, cmap=plt.cm.bone, linestyles=1.0)
+	ax_scatter.contourf(X0, X1, Z[0], 20, cmap=plt.cm.bone, linestyles=1.0)
 
 	ax_scatter.plot([inputs_true[0]], [inputs_true[1]], "*", color="limegreen", markersize=10, markeredgecolor="white")
 	ax_scatter.scatter(optimizer.M_prior[0,:], optimizer.M_prior[1,:], s=15, edgecolors="k", linewidths=1.5, c="gray")
 	ax_scatter.scatter(optimizer.M_post[0,:], optimizer.M_post[1,:], s=15, edgecolors="k", linewidths=1.5, c="lightblue")
 
 	ax_hist_h.hist(optimizer.M_prior[0,:], bins=20, color="gray", alpha=1.0, ec="black", label="Prior")
-	ax_hist_h.hist(optimizer.M_post[0,:], bins=6, color="lightblue", alpha=1.0, ec="black", label="Post")
+	ax_hist_h.hist(optimizer.M_post[0,:], bins=20, color="lightblue", alpha=1.0, ec="black", label="Post")
+	ax_hist_h.tick_params(left=True, right=False, labelleft=True, labelbottom=False, bottom=False)
 	ax_hist_h.legend(loc=0, shadow=True, fancybox=True, prop={'size': 6})
 
 	ax_hist_v.hist(optimizer.M_prior[1,:], bins=20, color="gray", alpha=1.0, ec="black", orientation="horizontal", label="Prior")
-	ax_hist_v.hist(optimizer.M_post[1,:], bins=10, color="lightblue", alpha=1.0, ec="black", orientation="horizontal", label="Post")
+	ax_hist_v.hist(optimizer.M_post[1,:], bins=20, color="lightblue", alpha=1.0, ec="black", orientation="horizontal", label="Post")
+	ax_hist_v.tick_params(left=False, right=False, labelleft=False, labelbottom=True, bottom=True)
 	ax_hist_v.legend(loc=0, shadow=True, fancybox=True, prop={'size': 6})
 
 	apply_dark_theme(fig, [ax_scatter, ax_hist_h, ax_hist_v], transparent=False)
@@ -83,10 +87,11 @@ def main():
 			x1 = x[0]
 			x2 = x[1]
 			f = [x1**4 - 2*x2*x1**2 + x2**2 + x1**2 - 2*x1 + 5]
+			# f = [x1**2 + x2**2]
 			return np.array(f) # It has to return an array, even if it's a scalar function
 
 	# Generate the prior ensemble
-	n_samples = 400
+	n_samples = 1000
 	np.random.seed(42)
 	x1 = np.random.normal(loc=0, scale=0.5, size=n_samples).reshape((1, n_samples))
 	x2 = np.random.normal(loc=0, scale=0.5, size=n_samples).reshape((1, n_samples))
@@ -96,9 +101,11 @@ def main():
 	x_true = [1.0, 1.0]
 	banana = Banana()
 	y_true = banana.eval(x=x_true)
+	print(y_true)
 
 	# Apply ES-MDA
-	optimizer = ESMDA(banana.eval, M_prior, y_true, eta=0.0001, qsi=0.99, alpha=0.1, max_ite=350, tol=1e-8, verbose=1)
+	alpha = 35
+	optimizer = ESMDA(banana.eval, M_prior, y_true, eta=0.00000000000001, qsi=0.99, alpha=alpha, verbose=0)
 	optimizer.run()
 
 	# Plot results

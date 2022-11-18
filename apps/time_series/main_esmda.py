@@ -118,7 +118,7 @@ def main():
 	y_true = my_function.eval([A_true, B_true, C_true])
 
 	# Apply ES-MDA
-	optimizer = ESMDA(my_function.eval, M_prior, y_true, eta=0.01, qsi=0.99, alpha=4, max_ite=50, tol=1e-4, verbose=1)
+	optimizer = ESMDA(my_function.eval, M_prior, y_true, eta=0.5, qsi=0.99, alpha=2, verbose=1)
 	optimizer.run()
 
 	# Plot results

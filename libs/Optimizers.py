@@ -1,27 +1,24 @@
 import numpy as np
 from functools import partial
 
-class PSO():
-	def __init__(self, func, lb, ub, ieqcons=[], f_ieqcons=None, args=(), kwargs={}, 
-			        swarmsize=100, omega=0.5, phip=0.5, phig=0.5, maxiter=100, 
-			        minstep=1e-8, minfunc=1e-8, debug=False, processes=1,
-			        particle_output=False, history=False, output_folder=False):
-		pass
+# class PSO():
+# 	def __init__(self, func, M_prior, ieqcons=[], f_ieqcons=None, args=(), kwargs={}, 
+# 			        swarmsize=100, omega=0.5, phip=0.5, phig=0.5, maxiter=100, 
+# 			        minstep=1e-8, minfunc=1e-8, debug=False, processes=1,
+# 			        particle_output=False, history=False, output_folder=False):
 
-	def run(self):
-		pass
+# 	def run(self):
+# 		pass
 
 
 class ESMDA():
-	def __init__(self, objective_function, M_prior, y_true, eta=0.001, qsi=0.99, alpha=4, max_ite=100, tol=1e-6, verbose=0):
-		self.obj = objective_function
+	def __init__(self, func, M_prior, y_true, eta=0.001, qsi=0.99, alpha=4, verbose=0):
+		self.obj = func
 		self.M_prior = M_prior
 		self.y_abs = np.abs(y_true)
 		self.eta = eta
 		self.qsi = qsi
 		self.alpha = alpha
-		self.max_ite = max_ite
-		self.tol = tol
 		self.verbose = verbose
 
 		self.__initialize()
@@ -31,15 +28,12 @@ class ESMDA():
 		s_inv_diag = np.power(s_diag, -1)
 		INd = np.eye(len(self.y_abs))
 
-		error = 2*self.tol
 		ite = 0
-		while error > self.tol and ite <= self.max_ite:
+		while ite <= self.alpha:
 			D = self.compute_predictions()
 			self.__update_M_post(np.abs(D), self.alpha)
-			if ite > 0:
-				error = np.abs(D.std() - D_old.std())
 			if self.verbose == 1:
-				print(f"{ite}/{self.max_ite} - {D.std()} - {error}")
+				print(f"{ite}/{self.alpha} - {D.std()}")
 			D_old = D.copy()
 			ite += 1
 
